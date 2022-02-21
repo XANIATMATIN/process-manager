@@ -1,0 +1,32 @@
+{
+    "name": "matin-utils/process-manager",
+    "description": "managing multiple proccess with socket",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "aghaie",
+            "email": "maryamaghaie2570@gmail.com"
+        }
+    ],
+    "require": {
+        "matin-utils/easy-socket": "dev-main"
+    },
+    "minimum-stability": "dev",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "MatinUtils\\ProcessManager\\ServiceProvider"
+            ]
+        }
+    },
+    "autoload": {
+        "classmap": [],
+        "files": [
+            "Functions.php"
+        ],
+        "psr-4": {
+            "MatinUtils\\ProcessManager\\": "src/"
+        }
+    }
+}
