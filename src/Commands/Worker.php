@@ -44,14 +44,14 @@ class Worker extends Command
             $length = strlen($this->buffer);
             if ($this->buffer[$length - 1] == "\0") {
                 // app('log')->info("Worker " . $this->argument('processNumber') . ". Reveived. " . strlen($this->buffer) . " bytes");
-                app('log')->info("Worker " . $this->argument('processNumber') . ". Reveived. " . $this->buffer);
+                // app('log')->info("Worker " . $this->argument('processNumber') . ". Reveived. " . $this->buffer);
                 $request = $this->makeRequest($this->buffer);
                 $response = $this->makeResponse();
                 $router = $this->makeRouter();
                 $router->handle($request, $response);
                 $outPut = ($response->returnable()) ? $response->getOutput() : 'idle';
                 // app('log')->info($outPut);
-                socket_write($pm, $response->getOutput());
+                socket_write($pm, $outPut);
                 $this->buffer = '';
             }
         }
