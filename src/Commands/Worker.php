@@ -11,7 +11,7 @@ class Worker extends Command
 
     protected $description = 'process-manager worker';
 
-    protected $buffer = '';
+    protected $buffer = '', $pm;
 
     public function __construct()
     {
@@ -21,21 +21,21 @@ class Worker extends Command
     public function handle()
     {
         try {
-            $pm = socket_create(AF_UNIX, SOCK_STREAM, 0);
-            socket_connect($pm, base_path('bootstrap/easySocket/worker.sock'));
+            $this->pm = socket_create(AF_UNIX, SOCK_STREAM, 0);
+            socket_connect($this->pm, base_path('bootstrap/easySocket/worker.sock'));
         } catch (\Throwable $th) {
             app('log')->error("Worker " . $this->argument('processNumber') . ". PM connection unavailable. " . $th->getMessage());
             return;
         }
         app('log')->info("Worker " . $this->argument('processNumber') . ". Connected to PM");
 
-        socket_write($pm,  'idle');
+        $this->writeOnSocket('idle');
         while (true) {
-            $input = socket_read($pm, 5000);
+            $input = socket_read($this->pm, 5000);
 
             if (empty($input)) {
                 app('log')->info("Worker " . $this->argument('processNumber') . ". PM broke");
-                socket_close($pm);
+                socket_close($this->pm);
                 break;
             }
 
@@ -45,19 +45,30 @@ class Worker extends Command
             if ($this->buffer[$length - 1] == "\0") {
                 // app('log')->info("Worker " . $this->argument('processNumber') . ". Reveived. " . strlen($this->buffer) . " bytes");
                 // app('log')->info("Worker " . $this->argument('processNumber') . ". Reveived. " . $this->buffer);
-                $request = $this->makeRequest($this->buffer);
-                $response = $this->makeResponse();
-                $router = $this->makeRouter();
-                $router->handle($request, $response);
-                $outPut = ($response->returnable()) ? $response->getOutput() : 'idle';
-                // app('log')->info($outPut);
-                socket_write($pm, $outPut);
+                $response = $this->startProcess();
+                $this->writeOnSocket($response);
                 $this->buffer = '';
             }
         }
     }
 
-    protected function makeRequest($input)
+    protected function writeOnSocket($output)
+    {
+        $data = $output . "\0";
+        // app('log')->info("outPut $data");
+        socket_write($this->pm, $data);
+    }
+
+    protected function startProcess()
+    {
+        $request = $this->makeRequest();
+        $response = $this->makeResponse();
+        $router = $this->makeRouter();
+        $router->handle($request, $response);
+        return ($response->returnable()) ? $response->getOutput() : 'idle';
+    }
+
+    protected function makeRequest()
     {
         $protocolAlias = config('easySocket.defaultProtocol', 'http');
         $class = config("easySocket.protocols.$protocolAlias") . '\Request';
@@ -66,7 +77,7 @@ class Worker extends Command
             throw new Exception("No Protocol", 1);
         }
 
-        return new $class($input);
+        return new $class($this->buffer);
     }
 
     protected function makeResponse()

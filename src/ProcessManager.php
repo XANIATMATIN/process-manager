@@ -2,14 +2,13 @@
 
 namespace MatinUtils\ProcessManager;
 
-use Exception;
 use MatinUtils\EasySocket\ClientHandler;
 
 class ProcessManager
 {
     protected $workerPort, $clientPort;
     protected $numOfProcess;
-    protected $pipes = [], $workers = [], $taskQueue = [], $workerStatus = [], $workerConnections = [], $clientConnections = [], $read = [];
+    protected $taskQueue = [], $workerConnections = [], $clientConnections = [], $read = [];
 
     public function run()
     {
@@ -17,13 +16,13 @@ class ProcessManager
         if (empty($this->clientPort)) {
             return;
         }
-        
+
         $this->numOfProcess = config('processManager.numOfProcess', 1);
 
         while (true) {
             $this->checkNumberOfWorkers();
 
-            $this->makeeReadArray();
+            $this->makeReadArray();
 
             socket_select($this->read, $write, $except, null);
 
@@ -47,30 +46,21 @@ class ProcessManager
         }
         for ($i = 0; $i < $this->numOfProcess; $i++) {
             if (empty($this->workerConnections[$i])) {
-                $this->workers[$i] = $this->startProcess($i);
-                $this->workerConnections[$i] = socket_accept($workerPort);
+                $worker = new WorkerHandler($i);
+                $worker->setConnection(socket_accept($workerPort));
+                $this->workerConnections[$i] = $worker;
             }
         }
     }
 
-    public function startProcess($processNumber)
+    protected function makeReadArray()
     {
-        $descriptorspec = [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']];
-        $worker = proc_open(base_path() . '/artisan process-manager:worker ' . $processNumber, $descriptorspec, $this->pipes[$processNumber]);
-        if (get_resource_type($worker) != 'process') {
-            app('log')->error("Can not start Process $processNumber");
-        } else {
-            // dump("Procces $processNumber started");
-        }
-        stream_set_blocking($this->pipes[$processNumber][1], 0);
-        return $worker;
-    }
-
-    protected function makeeReadArray()
-    {
-        $this->read = array_merge($this->workerConnections, [$this->clientPort]);
+        $this->read = [$this->clientPort];
         foreach ($this->clientConnections as $clientConnection) {
             $this->read[] = $clientConnection->getSocket();
+        }
+        foreach ($this->workerConnections as $workerConnection) {
+            $this->read[] = $workerConnection->getSocket();
         }
         return $this->read;
     }
@@ -86,31 +76,30 @@ class ProcessManager
     protected function readAllWorkers()
     {
         foreach ($this->workerConnections as $workerKey => $workerConnection) {
-            if (in_array($workerConnection, $this->read)) {
-                try {
-                    $fromWorker = socket_read($workerConnection, 1024);
-                } catch (\Throwable $th) {
-                }
-                if (empty($fromWorker)) {
-                    unset($this->workerConnections[$workerKey]);
-                    foreach ($this->taskQueue as $key => $task) {
-                        if ($task->isGivenToWorker($workerKey)) {
-                            if ($task->MaxedTries()) {
-                                app('log')->error("woker $workerKey broke");
-                                app('log')->info($task->getProperties());
-                                unset($this->taskQueue[$key]);
-                                continue;
+            if (in_array($workerConnection->getSocket(), $this->read)) {
+                $fromWorker = $workerConnection->read();
+                if (!$fromWorker) {
+                    if (!$workerConnection->status()) {
+                        unset($this->workerConnections[$workerKey]);
+                        foreach ($this->taskQueue as $key => $task) {
+                            if ($task->isGivenToWorker($workerKey)) {
+                                if ($task->MaxedTries()) {
+                                    app('log')->error("woker $workerKey broke");
+                                    app('log')->info($task->getProperties());
+                                    unset($this->taskQueue[$key]);
+                                    continue;
+                                }
+                                $task->removeWorkerKey();
                             }
-                            $task->removeWorkerKey();
                         }
+                        app('log')->error("woker $workerKey broke");
                     }
-                    app('log')->error("woker $workerKey broke");
                     continue;
                 }
 
-                $this->workerStatus[$workerKey] = 'idle';
-                // dump("Worker $workerKey status: idle");
+                $workerConnection->idle();
 
+                $fromWorker = $this->cleanData($fromWorker);
                 if ($fromWorker != 'idle') {
                     foreach ($this->taskQueue as $key => $task) {
                         if ($task->isGivenToWorker($workerKey)) {
@@ -143,22 +132,27 @@ class ProcessManager
 
     protected function allocateTasksToWorkers()
     {
-        foreach ($this->workerStatus as $workerKey => $status) {
-            if ($status == 'idle') {
+        foreach ($this->workerConnections as $workerKey => $workerConnection) {
+            if ($workerConnection->status() == 'idle') {
                 foreach ($this->taskQueue as $key => $task) {
                     if (!$task->isInProcess()) {
-                        socket_write($this->workerConnections[$workerKey], $task->input());
-                        $this->workerStatus[$workerKey] = 'busy';
+                        $workerConnection->writeOnSocket($task->input());
+                        $workerConnection->busy();
                         $task->inProcess($workerKey);
-
-                        if ($workerKey > 1) { ///> for observation         
-                            app('log')->info("task given to worker $workerKey: " . strlen($task->input()) . " bytes");
-                        }
                         // dump("task given to worker $workerKey: " . strlen($task->input()) . " bytes");
                         continue 2;
                     }
                 }
             }
         }
+    }
+
+    protected function cleanData($input)
+    {
+        $length = strlen($input);
+        if ($input[$length - 1] == "\0") {
+            $input = substr($input, 0, -1);
+        }
+        return $input;
     }
 }
