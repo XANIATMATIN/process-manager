@@ -150,7 +150,7 @@ class ProcessManager
     protected function cleanData($input)
     {
         $length = strlen($input);
-        if ($input[$length - 1] == "\0") {
+        if (($input[$length - 1] ?? "") == "\0") {
             $input = substr($input, 0, -1);
         }
         return $input;

@@ -55,7 +55,7 @@ class Worker extends Command
     protected function writeOnSocket($output)
     {
         $data = $output . "\0";
-        // app('log')->info("outPut $data");
+        // app('log')->info("Worker " . $this->argument('processNumber') . " outPut: $data");
         socket_write($this->pm, $data);
     }
 
@@ -63,7 +63,7 @@ class Worker extends Command
     {
         $request = $this->makeRequest();
         $response = $this->makeResponse();
-        $router = $this->makeRouter();
+        $router = $this->makeRouter($request);
         $router->handle($request, $response);
         return ($response->returnable()) ? $response->getOutput() : 'idle';
     }
@@ -72,11 +72,9 @@ class Worker extends Command
     {
         $protocolAlias = config('easySocket.defaultProtocol', 'http');
         $class = config("easySocket.protocols.$protocolAlias") . '\Request';
-
         if (empty($class)) {
             throw new Exception("No Protocol", 1);
         }
-
         return new $class($this->buffer);
     }
 
@@ -84,23 +82,19 @@ class Worker extends Command
     {
         $protocolAlias = config('easySocket.defaultProtocol', 'http');
         $class = config("easySocket.protocols.$protocolAlias") . '\Response';
-
         if (empty($class)) {
             throw new Exception("No Protocol", 1);
         }
-
         return new $class();
     }
 
-    protected function makeRouter()
+    protected function makeRouter($request)
     {
         $protocolAlias = config('easySocket.defaultProtocol', 'http');
         $class = config("easySocket.protocols.$protocolAlias") . '\Router';
-
         if (empty($class)) {
             throw new Exception("No Protocol", 1);
         }
-
-        return new $class();
+        return new $class($request);
     }
 }
