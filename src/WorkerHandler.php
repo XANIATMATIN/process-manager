@@ -2,9 +2,9 @@
 
 namespace MatinUtils\ProcessManager;
 
-use MatinUtils\EasySocket\ClientHandler;
+use MatinUtils\EasySocket\Consumer;
 
-class WorkerHandler extends ClientHandler
+class WorkerHandler extends Consumer
 {
     protected $processNumber, $process;
     protected $pipes = [];

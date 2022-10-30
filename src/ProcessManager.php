@@ -2,7 +2,7 @@
 
 namespace MatinUtils\ProcessManager;
 
-use MatinUtils\EasySocket\ClientHandler;
+use MatinUtils\EasySocket\Consumer;
 
 class ProcessManager
 {
@@ -68,7 +68,7 @@ class ProcessManager
     protected function checkForNewClients()
     {
         if (in_array($this->clientPort, $this->read)) {
-            $this->clientConnections[] =  new ClientHandler(socket_accept($this->clientPort));
+            $this->clientConnections[] =  new Consumer(socket_accept($this->clientPort));
             // dump('new client');
         }
     }
