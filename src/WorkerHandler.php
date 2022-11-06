@@ -43,7 +43,7 @@ class WorkerHandler extends Consumer
     {
         $this->status = 'busy';
 
-        if ($this->processNumber > 1) { ///> for observation         
+        if ($this->processNumber > 3) { ///> for observation         
             app('log')->info("task given to worker $this->processNumber");
         }
     }
