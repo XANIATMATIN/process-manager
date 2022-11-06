@@ -62,7 +62,7 @@ class Worker extends Command
     {
         $request = $this->makeRequest();
         $response = $this->makeResponse();
-        $router = $this->makeRouter();
+        $router = $this->makeRouter($request);
         $router->handle($request, $response);
         return ($response->returnable()) ? $response->getOutput() : 'idle';
     }
@@ -91,7 +91,7 @@ class Worker extends Command
         return new $class();
     }
 
-    protected function makeRouter()
+    protected function makeRouter($request)
     {
         $protocolAlias = config('easySocket.defaultProtocol', 'http');
         $class = config("easySocket.protocols.$protocolAlias") . '\Router';
@@ -100,6 +100,6 @@ class Worker extends Command
             throw new Exception("No Protocol", 1);
         }
 
-        return new $class();
+        return new $class($request);
     }
 }
