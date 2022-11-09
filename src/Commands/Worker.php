@@ -29,7 +29,7 @@ class Worker extends Command
         }
         app('log')->info("Worker " . $this->argument('processNumber') . ". Connected to PM");
 
-        $this->writeOnSocket('idle');
+        $this->writeOnSocket('__WORKERSTATUSISIDLE__');
         while (true) {
             $input = socket_read($this->pm, 5000);
 
@@ -64,7 +64,7 @@ class Worker extends Command
         $response = $this->makeResponse();
         $router = $this->makeRouter($request);
         $router->handle($request, $response);
-        return ($response->returnable()) ? $response->getOutput() : 'idle';
+        return ($response->returnable()) ? $response->getOutput() : '__WORKERSTATUSISIDLE__';
     }
 
     protected function makeRequest()

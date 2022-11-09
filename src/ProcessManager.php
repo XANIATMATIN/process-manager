@@ -100,7 +100,7 @@ class ProcessManager
                 $workerConnection->idle();
 
                 $fromWorker = $this->cleanData($fromWorker);
-                if ($fromWorker != 'idle') {
+                if (!preg_match('/^__WORKERSTATUSISIDLE__/', $fromWorker, $output_array)) {
                     foreach ($this->taskQueue as $key => $task) {
                         if ($task->isGivenToWorker($workerKey)) {
                             $task->client->writeOnSocket($fromWorker);
