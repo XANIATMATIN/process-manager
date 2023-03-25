@@ -21,8 +21,7 @@ class Worker extends Command
     public function handle()
     {
         try {
-            $this->pm = socket_create(AF_UNIX, SOCK_STREAM, 0);
-            socket_connect($this->pm, base_path('bootstrap/easySocket/worker.sock'));
+            $this->pm = connectToSocket(config('processManager.workerPort', 'worker'));
         } catch (\Throwable $th) {
             app('log')->error("Worker " . $this->argument('processNumber') . ". PM connection unavailable. " . $th->getMessage());
             return;

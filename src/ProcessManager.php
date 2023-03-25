@@ -12,8 +12,9 @@ class ProcessManager
 
     public function run()
     {
-        $this->clientPort = serveAndListen('client');
+        $this->clientPort = serveAndListen(config('processManager.clientPort', 'client'));
         if (empty($this->clientPort)) {
+            app('log')->error('Process Manager: can not serve client socket');
             return;
         }
 
@@ -42,7 +43,7 @@ class ProcessManager
     {
         static $workerPort;
         if (empty($workerPort)) {
-            $workerPort = serveAndListen('worker');
+            $workerPort = serveAndListen(config('processManager.workerPort', 'worker'));
         }
         for ($i = 0; $i < $this->numOfProcess; $i++) {
             if (empty($this->workerConnections[$i])) {
