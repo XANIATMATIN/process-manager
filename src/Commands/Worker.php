@@ -26,24 +26,18 @@ class Worker extends Command
             app('log')->error("Worker " . $this->argument('processNumber') . ". PM connection unavailable. " . $th->getMessage());
             return;
         }
-        app('log')->info("Worker " . $this->argument('processNumber') . ". Connected to PM");
+        // app('log')->info("Worker " . $this->argument('processNumber') . ". Connected to PM");
 
         $this->writeOnSocket('__WORKERSTATUSISIDLE__');
         while (true) {
             $input = socket_read($this->pm, 5000);
-
             if (empty($input)) {
-                app('log')->info("Worker " . $this->argument('processNumber') . ". PM broke");
+                // app('log')->info("Worker " . $this->argument('processNumber') . ". PM broke");
                 socket_close($this->pm);
                 break;
             }
-
             $this->buffer .= $input;
-
-            $length = strlen($this->buffer);
-            if ($this->buffer[$length - 1] == "\0") {
-                // app('log')->info("Worker " . $this->argument('processNumber') . ". Reveived. " . strlen($this->buffer) . " bytes");
-                // app('log')->info("Worker " . $this->argument('processNumber') . ". Reveived. " . $this->buffer);
+            if (app('easy-socket')->messageIsCompelete($this->buffer)) {
                 $response = $this->startProcess();
                 $this->writeOnSocket($response);
                 $this->buffer = '';
@@ -53,8 +47,7 @@ class Worker extends Command
 
     protected function writeOnSocket($output)
     {
-        $data = $output . "\0";
-        socket_write($this->pm, $data);
+        socket_write($this->pm, app('easy-socket')->prepareMessage($output));
     }
 
     protected function startProcess()

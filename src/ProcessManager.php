@@ -17,9 +17,7 @@ class ProcessManager
             app('log')->error('Process Manager: can not serve client socket');
             return;
         }
-
-        $this->numOfProcess = config('processManager.numOfProcess', 1);
-
+        $this->numOfProcess = config('processManager.numOfProcess', 3);
         while (true) {
             $this->checkNumberOfWorkers();
 
@@ -34,8 +32,6 @@ class ProcessManager
             $this->readAllClients();
 
             $this->allocateTasksToWorkers();
-
-            // dump('taskQueue count: ' . count($this->taskQueue) . '. clint count: ' . count($this->clientConnections) . '. workers count: ' . count($this->workerConnections));
         }
     }
 
@@ -70,7 +66,6 @@ class ProcessManager
     {
         if (in_array($this->clientPort, $this->read)) {
             $this->clientConnections[] =  new Consumer(socket_accept($this->clientPort));
-            // dump('new client');
         }
     }
 
@@ -97,10 +92,8 @@ class ProcessManager
                     }
                     continue;
                 }
-
                 $workerConnection->idle();
-
-                $fromWorker = $this->cleanData($fromWorker);
+                $fromWorker = app('easy-socket')->cleanData($fromWorker);
                 if (!preg_match('/^__WORKERSTATUSISIDLE__/', $fromWorker, $output_array)) {
                     foreach ($this->taskQueue as $key => $task) {
                         if ($task->isGivenToWorker($workerKey)) {
@@ -124,8 +117,6 @@ class ProcessManager
                     }
                 } else {
                     $this->taskQueue[] = new Task($clientConnection, $clientKey, $input);
-
-                    // dump("new request from client $clientKey. " . strlen($input) . " bytes");
                 }
             }
         }
@@ -140,20 +131,10 @@ class ProcessManager
                         $workerConnection->writeOnSocket($task->input());
                         $workerConnection->busy();
                         $task->inProcess($workerKey);
-                        // dump("task given to worker $workerKey: " . strlen($task->input()) . " bytes");
                         continue 2;
                     }
                 }
             }
         }
-    }
-
-    protected function cleanData($input)
-    {
-        $length = strlen($input);
-        if (($input[$length - 1] ?? "") == "\0") {
-            $input = substr($input, 0, -1);
-        }
-        return $input;
     }
 }
