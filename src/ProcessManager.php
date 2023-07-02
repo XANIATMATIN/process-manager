@@ -10,16 +10,17 @@ class ProcessManager
     protected $numOfProcess;
     protected $taskQueue = [], $workerConnections = [], $clientConnections = [], $read = [];
 
-    public function run()
+    public function run($clientPort, $workerPort, $workerCount)
     {
-        $this->clientPort = serveAndListen(config('processManager.clientPort', 'client'));
+        $this->numOfProcess = $workerCount;
+        dump($this->numOfProcess);
+        $this->clientPort = serveAndListen($clientPort);
         if (empty($this->clientPort)) {
             app('log')->error('Process Manager: can not serve client socket');
             return;
         }
-        $this->numOfProcess = config('processManager.numOfProcess', 3);
         while (true) {
-            $this->checkNumberOfWorkers();
+            $this->checkNumberOfWorkers($workerPort);
 
             $this->makeReadArray();
 
@@ -35,15 +36,15 @@ class ProcessManager
         }
     }
 
-    protected function checkNumberOfWorkers()
+    protected function checkNumberOfWorkers($workerPortName)
     {
         static $workerPort;
         if (empty($workerPort)) {
-            $workerPort = serveAndListen(config('processManager.workerPort', 'worker'));
+            $workerPort = serveAndListen($workerPortName);
         }
         for ($i = 0; $i < $this->numOfProcess; $i++) {
             if (empty($this->workerConnections[$i])) {
-                $worker = new WorkerHandler($i);
+                $worker = new WorkerHandler($i, $workerPortName);
                 $worker->setConnection(socket_accept($workerPort));
                 $this->workerConnections[$i] = $worker;
             }

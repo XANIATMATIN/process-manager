@@ -6,12 +6,13 @@ use MatinUtils\EasySocket\Consumer;
 
 class WorkerHandler extends Consumer
 {
-    protected $processNumber, $process;
+    protected $processNumber, $process, $portName;
     protected $pipes = [];
 
-    public function __construct(int $processNumber)
+    public function __construct(int $processNumber, $workerPortName)
     {
         $this->processNumber = $processNumber;
+        $this->portName = $workerPortName;
 
         $this->startProcess();
     }
@@ -19,11 +20,11 @@ class WorkerHandler extends Consumer
     public function startProcess()
     {
         $descriptorspec = [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']];
-        $process = proc_open(base_path() . '/artisan process-manager:worker ' . $this->processNumber, $descriptorspec, $this->pipes);
+        $process = proc_open(base_path() . "/artisan process-manager:worker $this->processNumber $this->portName"  , $descriptorspec, $this->pipes);
         if (get_resource_type($process) != 'process') {
             app('log')->error("Can not start Process $this->processNumber");
         } else {
-            // dump("Procces $processNumber started");
+            // app('log')->info("Procces $this->processNumber started");
         }
         stream_set_blocking($this->pipes[1], 0);
     }

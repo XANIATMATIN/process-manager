@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 
 class Worker extends Command
 {
-    protected $signature = 'process-manager:worker {processNumber}';
+    protected $signature = 'process-manager:worker {processNumber} {portName}';
 
     protected $description = 'process-manager worker';
 
@@ -21,7 +21,7 @@ class Worker extends Command
     public function handle()
     {
         try {
-            $this->pm = connectToSocket(config('processManager.workerPort', 'worker'));
+            $this->pm = connectToSocket($this->argument('portName'));
         } catch (\Throwable $th) {
             app('log')->error("Worker " . $this->argument('processNumber') . ". PM connection unavailable. " . $th->getMessage());
             return;

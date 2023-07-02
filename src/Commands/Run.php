@@ -10,13 +10,11 @@ class Run extends Command
 
     protected $description = 'run process-manager';
 
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
     public function handle()
     {
-        return app('process-manager')->run();
+        $clientPort = config('processManager.clientPort', 'client');
+        $workerPort = config('processManager.workerPort', 'worker');
+        $workerCount = config('processManager.numOfProcess', 3);
+        return app('process-manager')->run($clientPort, $workerPort, $workerCount);
     }
 }
