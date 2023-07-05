@@ -7,13 +7,12 @@ use MatinUtils\EasySocket\Consumer;
 class ProcessManager
 {
     protected $workerPort, $clientPort;
-    protected $numOfProcess;
+    protected $numOfProcess = 0, $availableWorkers = 0;
     protected $taskQueue = [], $workerConnections = [], $clientConnections = [], $read = [];
 
     public function run($clientPort, $workerPort, $workerCount)
     {
         $this->numOfProcess = $workerCount;
-        dump($this->numOfProcess);
         $this->clientPort = serveAndListen($clientPort);
         if (empty($this->clientPort)) {
             app('log')->error('Process Manager: can not serve client socket');
@@ -94,11 +93,17 @@ class ProcessManager
                     continue;
                 }
                 $workerConnection->idle();
+                $this->availableWorkers++;
                 $fromWorker = app('easy-socket')->cleanData($fromWorker);
+                ///> worker only send stuff if they're idle or the have the client's response, we'll check if the 
+                ///> workers send __WORKERSTATUSISIDLE__ when they just start working
+                ///> workers send __TASKDONE__ when they finish a non-returnable client's task
                 if (!preg_match('/^__WORKERSTATUSISIDLE__/', $fromWorker, $output_array)) {
                     foreach ($this->taskQueue as $key => $task) {
                         if ($task->isGivenToWorker($workerKey)) {
-                            $task->client->writeOnSocket($fromWorker);
+                            if (!preg_match('/^__TASKDONE__/', $fromWorker, $output_array)) {
+                                $task->client->writeOnSocket($fromWorker);
+                            }
                             unset($this->taskQueue[$key]);
                         }
                     }
@@ -117,7 +122,10 @@ class ProcessManager
                         unset($this->clientConnections[$clientKey]);
                     }
                 } else {
-                    $this->taskQueue[] = new Task($clientConnection, $clientKey, $input);
+                    ///> if the client send multiple short messages one imediately after another they'll come here attached, so we need to seperate them into different tasks
+                    foreach (app('easy-socket')->seperateMessageGroup($input) as $input) {
+                        $this->taskQueue[] = new Task($clientConnection, $clientKey, $input);
+                    }
                 }
             }
         }
@@ -132,6 +140,7 @@ class ProcessManager
                         $workerConnection->writeOnSocket($task->input());
                         $workerConnection->busy();
                         $task->inProcess($workerKey);
+                        $this->availableWorkers--;
                         continue 2;
                     }
                 }

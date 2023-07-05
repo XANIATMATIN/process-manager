@@ -56,7 +56,7 @@ class Worker extends Command
         $response = $this->makeResponse();
         $router = $this->makeRouter($request);
         $router->handle($request, $response);
-        return ($response->returnable()) ? $response->getOutput() : '__WORKERSTATUSISIDLE__';
+        return ($response->returnable()) ? $response->getOutput() : '__TASKDONE__';
     }
 
     protected function makeRequest()
