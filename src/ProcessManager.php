@@ -32,6 +32,7 @@ class ProcessManager
             $this->readAllClients();
 
             $this->allocateTasksToWorkers();
+            // dump("available workers $this->availableWorkers, tasks " . count($this->taskQueue));
         }
     }
 
