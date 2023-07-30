@@ -3,12 +3,21 @@
 namespace MatinUtils\ProcessManager;
 
 use MatinUtils\EasySocket\Consumer;
+use MatinUtils\ProcessManager\ServiceOrders\Logics\ShowStat;
+use MatinUtils\ProcessManager\ServiceOrders\Orders;
 
-class ProcessManager
+class ProcessManager 
 {
+    use ShowStat;
     protected $workerPort, $clientPort;
-    protected $numOfProcess = 0, $availableWorkers = 0;
+    protected $serviceOrders;
+    protected $numOfProcess = 0, $availableWorkers = 0, $maxWorkerKey = 0;
     protected $taskQueue = [], $workerConnections = [], $clientConnections = [], $read = [];
+
+    public function __construct()
+    {
+        $this->registerOrders();
+    }
 
     public function run($clientPort, $workerPort, $workerCount)
     {
@@ -123,12 +132,30 @@ class ProcessManager
                         unset($this->clientConnections[$clientKey]);
                     }
                 } else {
-                    ///> if the client send multiple short messages one imediately after another they'll come here attached, so we need to seperate them into different tasks
-                    foreach (app('easy-socket')->seperateMessageGroup($input) as $input) {
-                        $this->taskQueue[] = new Task($clientConnection, $clientKey, $input);
+                    if ($this->messageHasTasks($input)) {
+                        $this->addTasks($clientConnection, $clientKey, $this->handleTaskMessages($clientConnection, $input));
+                        ///> For Observation
+                        if ($this->availableWorkers < $this->numOfProcess - ($this->numOfProcess * 80 / 100)) {
+                            app('log')->info("$this->availableWorkers/$this->numOfProcess available workers");
+                        }
+                    } else {
+                        $clientConnection->writeOnSocket($this->serviceOrders->run($input));
                     }
                 }
             }
+        }
+    }
+
+    protected function handleTaskMessages($clientConnection, $input)
+    {
+        ///> if the client send multiple short messages one imediately after another they'll come here attached, so we need to seperate them into different tasks
+        return app('easy-socket')->seperateMessageGroup($input);
+    }
+
+    protected function addTasks($clientConnection, $clientKey, $tasks)
+    {
+        foreach ($tasks as $input) {
+            $this->taskQueue[] = new Task($clientConnection, $clientKey, $input);
         }
     }
 
@@ -142,10 +169,23 @@ class ProcessManager
                         $workerConnection->busy();
                         $task->inProcess($workerKey);
                         $this->availableWorkers--;
+                        if ($this->maxWorkerKey < $workerKey) {
+                            $this->maxWorkerKey = $workerKey;
+                        }
                         continue 2;
                     }
                 }
             }
         }
+    }
+
+    protected function messageHasTasks($input)
+    {
+        return !$this->serviceOrders->messageIsAnOrder($input);
+    }
+
+    protected function registerOrders()
+    {
+        $this->serviceOrders = new Orders($this);
     }
 }
