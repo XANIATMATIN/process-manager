@@ -2,6 +2,8 @@
 
 namespace MatinUtils\ProcessManager\ServiceOrders\Logics;
 
+use Carbon\Carbon;
+
 trait ShowStat
 {
     public function workersCount()
@@ -40,5 +42,10 @@ trait ShowStat
             }
         }
         return ['inProgress' => $inProgress, 'waiting' => $waiting];
+    }
+
+    public function upTime()
+    {
+        return Carbon::createFromTimestamp($this->startTimeStamp)->diffForHumans();
     }
 }

@@ -10,7 +10,7 @@ class ProcessManager
 {
     use ShowStat;
     protected $workerPort, $clientPort;
-    protected $serviceOrders;
+    protected $serviceOrders, $startTimeStamp;
     protected $numOfProcess = 0, $availableWorkers = 0, $maxWorkerKey = 0;
     protected $taskQueue = [], $workerConnections = [], $clientConnections = [], $read = [];
 
@@ -27,6 +27,7 @@ class ProcessManager
             app('log')->error('Process Manager: can not serve client socket');
             return;
         }
+        $this->startTimeStamp = microtime(true);
         while (true) {
             $this->checkNumberOfWorkers($workerPort);
 
