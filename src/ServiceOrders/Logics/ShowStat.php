@@ -2,8 +2,6 @@
 
 namespace MatinUtils\ProcessManager\ServiceOrders\Logics;
 
-use Carbon\Carbon;
-
 trait ShowStat
 {
     public function workersCount()
@@ -19,6 +17,13 @@ trait ShowStat
     public function clientsCount()
     {
         return count($this->clientConnections);
+    }
+
+    public function latestClientNumber()
+    {
+        foreach ($this->clientConnections as $key => $val) {
+        }
+        return $key ?? '';
     }
 
     public function tasksCount()
@@ -42,10 +47,5 @@ trait ShowStat
             }
         }
         return ['inProgress' => $inProgress, 'waiting' => $waiting];
-    }
-
-    public function upTime()
-    {
-        return Carbon::createFromTimestamp($this->startTimeStamp)->diffForHumans();
     }
 }
