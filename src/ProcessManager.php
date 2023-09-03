@@ -6,7 +6,7 @@ use MatinUtils\EasySocket\Consumer;
 use MatinUtils\ProcessManager\ServiceOrders\Logics\ShowStat;
 use MatinUtils\ProcessManager\ServiceOrders\Orders;
 
-class ProcessManager
+class ProcessManager 
 {
     use ShowStat;
     protected $workerPort, $clientPort;
@@ -42,6 +42,7 @@ class ProcessManager
             $this->readAllClients();
 
             $this->allocateTasksToWorkers();
+            // dump("available workers $this->availableWorkers, tasks " . count($this->taskQueue));
         }
     }
 
@@ -161,12 +162,10 @@ class ProcessManager
 
     protected function allocateTasksToWorkers()
     {
-        $busyWorkers = [];
-        foreach ($this->taskQueue as $key => $task) {
-            if (!$task->isInProcess()) {
-                foreach ($this->workerConnections as $workerKey => $workerConnection) {
-                    if (in_array($workerKey, $busyWorkers)) continue; ///> busyWorkers array is for all the workers that are allocated in this turn. i thought maybe this is more efficient than checking status
-                    if ($workerConnection->status() == 'idle') {
+        foreach ($this->workerConnections as $workerKey => $workerConnection) {
+            if ($workerConnection->status() == 'idle') {
+                foreach ($this->taskQueue as $key => $task) {
+                    if (!$task->isInProcess()) {
                         $workerConnection->writeOnSocket($task->input());
                         $workerConnection->busy();
                         $task->inProcess($workerKey);
@@ -174,10 +173,7 @@ class ProcessManager
                         if ($this->maxWorkerKey < $workerKey) {
                             $this->maxWorkerKey = $workerKey;
                         }
-                        $busyWorkers[] = $workerKey;
                         continue 2;
-                    } else {
-                        $busyWorkers[] = $workerKey;
                     }
                 }
             }
