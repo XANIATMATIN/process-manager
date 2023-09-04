@@ -22,9 +22,9 @@ class OrdersList
                     'connected clients' => $processManager->clientsCount(),
                     'total clients' => $processManager->latestClientNumber(),
                     'total tasks' => $processManager->tasksCount(),
-                    'tasks in Progress' => $tassksStat['inProgress'],
                     'tasks waiting' => $tassksStat['waiting'],
-                    'highest nuumber of workers used' => "$maxWorkers ($maxWorkersPercent%)",
+                    'tasks in Progress (current in-use workers)' => $tassksStat['inProgress'],
+                    'peak in-use workers' => "$maxWorkers ($maxWorkersPercent%)",
                 ];
                 return json_encode($data);
             },
