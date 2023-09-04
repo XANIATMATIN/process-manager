@@ -16,10 +16,11 @@ class OrdersList
                 $maxWorkersPercent = $maxWorkers * 100 / $processManager->workersCount() ;
                 $data = [
                     'service' => basename(base_path()),
+                    'up time' => $processManager->upTime(),
                     'total workers' => $processManager->workersCount(),
                     'idle workers' => "$availableWorkers ($idles%)",
                     'connected clients' => $processManager->clientsCount(),
-                    'current client key' => $processManager->latestClientNumber(),
+                    'total clients' => $processManager->latestClientNumber(),
                     'total tasks' => $processManager->tasksCount(),
                     'tasks in Progress' => $tassksStat['inProgress'],
                     'tasks waiting' => $tassksStat['waiting'],
