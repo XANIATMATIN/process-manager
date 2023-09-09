@@ -104,19 +104,24 @@ class ProcessManager
                 }
                 $workerConnection->idle();
                 $this->availableWorkers++;
-                $fromWorker = app('easy-socket')->cleanData($fromWorker);
-                ///> worker only send stuff if they're idle or the have the client's response, we'll check if the 
-                ///> workers send __WORKERSTATUSISIDLE__ when they just start working
-                ///> workers send __TASKDONE__ when they finish a non-returnable client's task
-                if (!preg_match('/^__WORKERSTATUSISIDLE__/', $fromWorker, $output_array)) {
-                    foreach ($this->taskQueue as $key => $task) {
-                        if ($task->isGivenToWorker($workerKey)) {
-                            if (!preg_match('/^__TASKDONE__/', $fromWorker, $output_array)) {
-                                $task->client->writeOnSocket($fromWorker);
-                            }
-                            unset($this->taskQueue[$key]);
-                        }
+                $this->handleWorkerInput(app('easy-socket')->cleanData($fromWorker), $workerKey);
+            }
+        }
+    }
+
+    protected function handleWorkerInput($fromWorker, $workerKey)
+    {
+        ///> example fromWorker RU:14.__WORKERSTATUSISIDLE__
+        ///> worker only send stuff if they're idle or the have the client's response, we'll check if the 
+        ///> workers send __WORKERSTATUSISIDLE__ when they just start working
+        ///> workers send __TASKDONE__ when they finish a non-returnable client's task
+        if (!preg_match('/__WORKERSTATUSISIDLE__$/', $fromWorker, $output_array)) {
+            foreach ($this->taskQueue as $key => $task) {
+                if ($task->isGivenToWorker($workerKey)) {
+                    if (!preg_match('/^__TASKDONE__/', $fromWorker, $output_array)) {
+                        $task->client->writeOnSocket($fromWorker);
                     }
+                    unset($this->taskQueue[$key]);
                 }
             }
         }
@@ -164,6 +169,7 @@ class ProcessManager
         $busyWorkers = [];
         foreach ($this->taskQueue as $key => $task) {
             if (!$task->isInProcess()) {
+                ksort($this->workerConnections);
                 foreach ($this->workerConnections as $workerKey => $workerConnection) {
                     if (in_array($workerKey, $busyWorkers)) continue; ///> busyWorkers array is for all the workers that are allocated in this turn. i thought maybe this is more efficient than checking status
                     if ($workerConnection->status() == 'idle') {
