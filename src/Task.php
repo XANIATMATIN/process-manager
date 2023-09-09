@@ -4,7 +4,7 @@ namespace MatinUtils\ProcessManager;
 
 class Task
 {
-    protected $tries = 0, $maxTries = ۱;
+    protected $tries = 0, $maxTries = 1;
     protected $workerKey = Null;
     protected $clientKey, $input;
     public $client;
