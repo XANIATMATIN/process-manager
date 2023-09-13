@@ -21,7 +21,7 @@ class ProcessManager
 
     public function run($clientPort, $workerPort, $workerCount)
     {
-        $this->numOfProcess = $workerCount;
+        $this->availableWorkers = $this->numOfProcess = $workerCount;
         $this->clientPort = serveAndListen($clientPort);
         if (empty($this->clientPort)) {
             app('log')->error('Process Manager: can not serve client socket');
@@ -53,6 +53,7 @@ class ProcessManager
         }
         for ($i = 0; $i < $this->numOfProcess; $i++) {
             if (empty($this->workerConnections[$i])) {
+                $this->availableWorkers--;
                 $worker = new WorkerHandler($i, $workerPortName);
                 $worker->setConnection(socket_accept($workerPort));
                 $this->workerConnections[$i] = $worker;
