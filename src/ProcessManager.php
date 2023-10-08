@@ -2,6 +2,7 @@
 
 namespace MatinUtils\ProcessManager;
 
+use App\Models\Pid;
 use MatinUtils\EasySocket\Consumer;
 use MatinUtils\ProcessManager\ServiceOrders\Logics\ShowStat;
 use MatinUtils\ProcessManager\ServiceOrders\Orders;
@@ -54,11 +55,17 @@ class ProcessManager
         for ($i = 0; $i < $this->numOfProcess; $i++) {
             if (empty($this->workerConnections[$i])) {
                 $this->availableWorkers--;
-                $worker = new WorkerHandler($i, $workerPortName);
+                $worker = $this->newWorkerHandler($i, $workerPortName);
+                $worker->startProcess();
                 $worker->setConnection(socket_accept($workerPort));
                 $this->workerConnections[$i] = $worker;
             }
         }
+    }
+
+    protected function newWorkerHandler($i, $workerPortName)
+    {
+        return new WorkerHandler($i, $workerPortName);
     }
 
     protected function makeReadArray()

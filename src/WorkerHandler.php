@@ -13,20 +13,23 @@ class WorkerHandler extends Consumer
     {
         $this->processNumber = $processNumber;
         $this->portName = $workerPortName;
-
-        $this->startProcess();
     }
 
     public function startProcess()
     {
         $descriptorspec = [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']];
-        $process = proc_open(base_path() . "/artisan process-manager:worker $this->processNumber $this->portName"  , $descriptorspec, $this->pipes);
+        $process = proc_open($this->makeCommand()  , $descriptorspec, $this->pipes);
         if (get_resource_type($process) != 'process') {
             app('log')->error("Can not start Process $this->processNumber");
         } else {
             // app('log')->info("Procces $this->processNumber started");
         }
         stream_set_blocking($this->pipes[1], 0);
+    }
+
+    protected function makeCommand()
+    {
+        return base_path() . "/artisan process-manager:worker $this->processNumber $this->portName";
     }
 
     public function setConnection($socket)
