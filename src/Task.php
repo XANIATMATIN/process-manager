@@ -2,11 +2,13 @@
 
 namespace MatinUtils\ProcessManager;
 
+use Carbon\Carbon;
+
 class Task
 {
     protected $tries = 0, $maxTries = 1;
     protected $workerKey = Null;
-    protected $clientKey, $input;
+    protected $clientKey, $input, $startTime;
     public $client;
 
     public function __construct($client, int $clientKey,  string $input)
@@ -14,11 +16,17 @@ class Task
         $this->client = $client;
         $this->clientKey = $clientKey;
         $this->input = $input;
+        $this->startTime = Carbon::now()->format('Y-m-d H:i');
     }
 
     public function input()
     {
         return $this->input;
+    }
+
+    public function startTime()
+    {
+        return $this->startTime;
     }
 
     public function removeWorkerKey()

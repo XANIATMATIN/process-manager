@@ -2,19 +2,29 @@
 
 namespace MatinUtils\ProcessManager\ServiceOrders;
 
+use Carbon\Carbon;
+
 class OrdersList
 {
     public function defaultOrders()
     {
         return [
+            'currenttasks' =>
+            function ($processManager) {
+                return json_encode([
+                    'tasks' => $tasks = $processManager->tasksDetails(),
+                    'totalTasks' => count($tasks),
+                    'now' => Carbon::now()->format('Y-m-d H:i')
+                ]);
+            },
             'showstat' =>
             function ($processManager) {
                 $availableWorkers = $processManager->availableWorkers();
                 $tassksStat = $processManager->tasksInProgress();
                 $idles = $availableWorkers * 100 / $processManager->workersCount();
-                $maxWorkers =$processManager->maxWorker() + 1;
-                $maxWorkersPercent = $maxWorkers * 100 / $processManager->workersCount() ;
-                $data = [
+                $maxWorkers = $processManager->maxWorker() + 1;
+                $maxWorkersPercent = $maxWorkers * 100 / $processManager->workersCount();
+                return json_encode([
                     'service' => basename(base_path()),
                     'up time' => $processManager->upTime(),
                     'total workers' => $processManager->workersCount(),
@@ -25,8 +35,7 @@ class OrdersList
                     'tasks waiting' => $tassksStat['waiting'],
                     'tasks in Progress (current in-use workers)' => $tassksStat['inProgress'],
                     'peak in-use workers' => "$maxWorkers ($maxWorkersPercent%)",
-                ];
-                return json_encode($data);
+                ]);
             },
         ];
     }

@@ -4,12 +4,13 @@ namespace MatinUtils\ProcessManager;
 
 use App\Models\Pid;
 use MatinUtils\EasySocket\Consumer;
+use MatinUtils\ProcessManager\ServiceOrders\Logics\CurrentTasks;
 use MatinUtils\ProcessManager\ServiceOrders\Logics\ShowStat;
 use MatinUtils\ProcessManager\ServiceOrders\Orders;
 
 class ProcessManager
 {
-    use ShowStat;
+    use ShowStat, CurrentTasks;
     protected $workerPort, $clientPort;
     protected $serviceOrders, $startTimeStamp;
     protected $numOfProcess = 0, $availableWorkers = 0, $maxWorkerKey = 0;
