@@ -9,6 +9,10 @@ class OrdersList
     public function defaultOrders()
     {
         return [
+            'availableworkers' =>
+            function ($processManager) {
+                return $processManager->availableWorkers();
+            },
             'currenttasks' =>
             function ($processManager) {
                 return json_encode([
