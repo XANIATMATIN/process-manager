@@ -84,7 +84,10 @@ class ProcessManager
     protected function checkForNewClients()
     {
         if (in_array($this->clientPort, $this->read)) {
-            $this->clientConnections[] =  new Consumer(socket_accept($this->clientPort));
+            $clientConnection =  new Consumer(socket_accept($this->clientPort));
+            if ($clientConnection->status()) {
+                $this->clientConnections[] = $clientConnection;
+            }
         }
     }
 
@@ -120,15 +123,27 @@ class ProcessManager
 
     protected function handleWorkerInput($fromWorker, $workerKey)
     {
-        ///> example fromWorker RU:14.__WORKERSTATUSISIDLE__
+        ///> example fromWorker __WORKERSTATUSISIDLE__
         ///> worker only send stuff if they're idle or the have the client's response, we'll check if the 
         ///> workers send __WORKERSTATUSISIDLE__ when they just start working
         ///> workers send __TASKDONE__ when they finish a non-returnable client's task
         if (!preg_match('/__WORKERSTATUSISIDLE__$/', $fromWorker, $output_array)) {
             foreach ($this->taskQueue as $key => $task) {
                 if ($task->isGivenToWorker($workerKey)) {
-                    if (!preg_match('/^__TASKDONE__/', $fromWorker, $output_array)) {
-                        $task->client->writeOnSocket($fromWorker);
+                    if (preg_match('/^__TASKDONE__/', $fromWorker, $output_array)) {
+                        ///> this mean task is for a non returnable (oneway) system like log
+                        ///> so the response is not important for the client and the client has already moved on
+                        $task->client->responseReceived();
+                    } else {
+                        ///> means the tsk is for a returnable system like MSS and we need to send back the worker's response to the client
+                        ///> sometimes a system has 2 types of tasks, both returnable and non returnable (like crawler), in this case we'll check and send response only if the client is waiting for a response, else the task was not returnable
+                        if ($task->client->isWaitingForResponse()) {
+                            $task->client->writeOnSocket($fromWorker);
+                            $task->client->responseReceived();
+                        } else {
+                            app('log')->info("There is a response from worker but the consumer has already received it's response and is no longer waiting for response");
+                            app('log')->info("fromWorker $fromWorker");
+                        }
                     }
                     unset($this->taskQueue[$key]);
                 }
@@ -160,8 +175,9 @@ class ProcessManager
         }
     }
 
-    protected function handleTaskMessages($clientConnection, $input)
+    protected function handleTaskMessages($clientConnection, $input) ///> rewritten in crawler
     {
+        $clientConnection->waitingForResponse(); /// this is not very clean (in case the task type is Not returnable, like log) but it won't be a problem bc non returnable tasks' responses will be handled differently in handleWorkerInput
         ///> if the client send multiple short messages one imediately after another they'll come here attached, so we need to seperate them into different tasks
         return app('easy-socket')->seperateMessageGroup($input);
     }
