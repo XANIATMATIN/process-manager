@@ -184,7 +184,7 @@ class ProcessManager
 
     protected function addTasks($clientConnection, $clientKey, $tasks)
     {
-        foreach ($tasks as $input) {
+        foreach ($tasks ?? [] as $input) {
             $this->taskQueue[] = new Task($clientConnection, $clientKey, $input);
         }
     }
