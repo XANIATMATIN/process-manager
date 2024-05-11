@@ -42,13 +42,21 @@ class Worker extends Command
                 $this->writeOnSocket($response);
                 $this->buffer = '';
             }
-            if (!$this->checkUp()) {
-                app('log')->info("Worker " . $this->argument('processNumber') . ". exits after checkUp");
-                app('log')->info("Worker " . $this->argument('processNumber') . ". Ram Usage: " . memory_get_usage(true) / (1024 * 1024) . ". input: $input");
+            if (!$this->processOver($input)) {
                 socket_close($this->pm);
                 break;
             }
         }
+    }
+
+    protected function processOver($input) ///> rewritten in crawler
+    {
+        if (!$this->checkUp()) {
+            app('log')->info("Worker " . $this->argument('processNumber') . ". exits after checkUp");
+            app('log')->info("Worker " . $this->argument('processNumber') . ". Ram Usage: " . memory_get_usage(true) / (1024 * 1024) . ". input: $input");
+            return false;
+        }
+        return true;
     }
 
     protected function checkUp()
