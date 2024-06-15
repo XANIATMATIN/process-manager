@@ -177,9 +177,14 @@ class ProcessManager
 
     protected function handleTaskMessages($clientConnection, $input) ///> rewritten in crawler
     {
+        $tasks = app('easy-socket')->seperateMessageGroup($input); ///> if the client send multiple short messages one imediately after another they'll come here attached, so we need to seperate them into different tasks
+        if (($this->availableWorkers + config('processManager.tasksOverload', 0)) < count($tasks)) {
+            $clientConnection->writeOnSocket('unavailable');
+            app('log')->info("tasksOverload");
+            return [];
+        }
         $clientConnection->waitingForResponse(); /// this is not very clean (in case the task type is Not returnable, like log) but it won't be a problem bc non returnable tasks' responses will be handled differently in handleWorkerInput
-        ///> if the client send multiple short messages one imediately after another they'll come here attached, so we need to seperate them into different tasks
-        return app('easy-socket')->seperateMessageGroup($input);
+        return $tasks;
     }
 
     protected function addTasks($clientConnection, $clientKey, $tasks)
