@@ -25,9 +25,9 @@ class OrdersList
             function ($processManager) {
                 $availableWorkers = $processManager->availableWorkers();
                 $tassksStat = $processManager->tasksInProgress();
-                $idles = $availableWorkers * 100 / $processManager->workersCount();
+                $idles = round($availableWorkers * 100 / $processManager->workersCount());
                 $maxWorkers = $processManager->maxWorker() + 1;
-                $maxWorkersPercent = $maxWorkers * 100 / $processManager->workersCount();
+                $maxWorkersPercent = round($maxWorkers * 100 / $processManager->workersCount());
                 return json_encode([
                     'service' => basename(base_path()),
                     'up time' => $processManager->upTime(),
