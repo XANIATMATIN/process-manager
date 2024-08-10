@@ -26,7 +26,7 @@ class ProcessManager
         $this->availableWorkers = $this->numOfProcess = $workerCount;
         $this->clientPort = serveAndListen($clientPort);
         if (empty($this->clientPort)) {
-            app('log')->error('Process Manager: can not serve client socket');
+            app('log')->error('Process Manager can not serve client socket');
             return;
         }
         $this->startTimeStamp = microtime(true);
