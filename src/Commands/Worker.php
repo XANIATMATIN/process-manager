@@ -31,6 +31,7 @@ class Worker extends Command
         $this->writeOnSocket('__WORKERSTATUSISIDLE__');
         while (true) {
             $input = socket_read($this->pm, 5000);
+            app('log')->info("Worker " . $this->argument('processNumber') . ". input $input");
             if (empty($input)) {
                 // app('log')->info("Worker " . $this->argument('processNumber') . ". PM broke");
                 socket_close($this->pm);
@@ -38,7 +39,9 @@ class Worker extends Command
             }
             $this->buffer .= $input;
             if (app('easy-socket')->messageIsCompelete($this->buffer)) {
+                app('log')->info("Worker " . $this->argument('processNumber') . ". messageIsCompelete");
                 $response = $this->startProcess();
+                app('log')->info("Worker " . $this->argument('processNumber') . ". startProcess response $response");
                 $this->writeOnSocket($response);
                 $this->buffer = '';
             }
@@ -75,6 +78,11 @@ class Worker extends Command
     protected function startProcess()
     {
         $request = $this->makeRequest();
+        // if (!$request->status()) {
+        //     ///> this will be false if there is a problem with the input's structure and it can not be handled by the protocol's request (like when it's not a json for the protocols that need this to be jason)
+        //     ///> usualy only happens when an outside client is trying to connect to thie server through this port
+        //     return '__TASKDONE__';
+        // }
         $response = $this->makeResponse();
         $router = $this->makeRouter($request);
         $router->handle($request, $response);
