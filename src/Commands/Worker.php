@@ -31,7 +31,6 @@ class Worker extends Command
         $this->writeOnSocket('__WORKERSTATUSISIDLE__');
         while (true) {
             $input = socket_read($this->pm, 5000);
-            app('log')->info("Worker " . $this->argument('processNumber') . ". input $input");
             if (empty($input)) {
                 // app('log')->info("Worker " . $this->argument('processNumber') . ". PM broke");
                 socket_close($this->pm);
@@ -39,9 +38,7 @@ class Worker extends Command
             }
             $this->buffer .= $input;
             if (app('easy-socket')->messageIsCompelete($this->buffer)) {
-                app('log')->info("Worker " . $this->argument('processNumber') . ". messageIsCompelete");
                 $response = $this->startProcess();
-                app('log')->info("Worker " . $this->argument('processNumber') . ". startProcess response $response");
                 $this->writeOnSocket($response);
                 $this->buffer = '';
             }
