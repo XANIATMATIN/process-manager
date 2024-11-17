@@ -72,7 +72,7 @@ class Worker extends Command
         socket_write($this->pm, app('easy-socket')->prepareMessage($output));
     }
 
-    protected function startProcess()
+    protected function startProcess() ///> rewritten in mss
     {
         $request = $this->makeRequest();
         // if (!$request->status()) {
